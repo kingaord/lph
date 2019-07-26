@@ -11,7 +11,8 @@ Maintainer  : andrzej.m.gajda@gmail.com
 Stability   : experimental
 Portability : POSIX
 
-Longer description
+Definition of CPL language. Since we are dealing only with completions of logic
+programs, the language is limited only to necessary parts.
 -}
 module CPL
     ( Form (..)
@@ -24,7 +25,7 @@ import LogicPrograms
 import Auxiliary
 import TwoValuedSem
 import ThreeValuedSem
-import Data.List (sort, groupBy, (\\), union, foldl1', sortBy, nub)
+import Data.List (sort, groupBy, (\\), union, foldl1', sortBy, nub, intercalate)
 
 
 -- | The CPL language.
@@ -36,7 +37,21 @@ data Form =
     | E Form Form   -- equivalence
     | T             -- verum
     | F             -- falsum      
-    deriving (Show, Read)
+    deriving (Read)
+
+instance Show Form where
+    show form = case form of
+        T -> "T"
+        F -> "F"
+        V a -> show a
+        N f -> "~" ++ show f
+        C (x:xs)
+            | null xs -> show x
+            | otherwise -> intercalate " & " (map show (x:xs))
+        D (x:xs)
+            | null xs -> show x
+            | otherwise -> intercalate " v " (map show (x:xs))
+        E f1 f2 -> show f1 ++ " <-> " ++ show f2
 
 instance Eq Form where
     T     == T      = True
@@ -121,8 +136,8 @@ instance LukasiewiczSemantic Form IntCPL where
 
 
 -- | An interpretation is a tuple with lists of variables: the first list
--- contains variables that are mapped to 'truth' and the second those that are
--- mapped to 'false'.
+-- contains variables that are mapped to truth and the second those that are
+-- mapped to false.
 data IntCPL = IntCPL { trCPL :: [Form] , faCPL :: [Form] }
     deriving (Read, Eq)
 
@@ -133,6 +148,7 @@ instance Show IntCPL where
 -- | Checks if a given interpretation is a model for a given set of formulas.
 isModel2vCPL :: [Form] -> IntCPL -> Bool
 isModel2vCPL set int = all (\x -> eval2v x int == Tr2v) set
+
 
 -- | Checks if a given interpretation is a model for a given set of formulas.
 isModelLukasiewiczCPL :: [Form] -> IntCPL -> Bool

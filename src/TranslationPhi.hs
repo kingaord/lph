@@ -22,7 +22,7 @@ import LogicPrograms
 import Data.List (length, maximum, map, find, (\\), delete, partition, foldl1)
 import Data.Char 
 import System.Random
-import Translation
+import TranslationTp
 
 
 -- | NNupdate that contains Top and Bottom neurons for the input layer.
@@ -108,7 +108,7 @@ updFromAssumption (Assumption hd) nn w biasHid biasOut = case outNeuOld of
         hidNeuIdxBot    = "hid" ++ hidNeuIdxNumBot
         hidNs           = [Neuron ("h" ++ hidNeuIdxNum ++ "Top") "threshold" biasHid hidNeuIdxTop, 
                            Neuron ("h" ++ hidNeuIdxNum ++ "Bot") "threshold" biasHid hidNeuIdxBot]
-        remJust         = \(Just x) -> x
+        remJust = \(Just x) -> x
 
 
 updFromFact :: Clause -> NeuralNetwork -> Float -> Float -> Float -> NNupdate
@@ -233,7 +233,7 @@ createInpToHidConnBot hidIdx inpNs pBod nBod w =
     [ Connection (NeuralNetworks.idx n) hidIdx w | n <- inpNs, any (\x -> (show x ++ "Bot") == NeuralNetworks.label n) pBod ] ++
     [ Connection (NeuralNetworks.idx n) hidIdx w | n <- inpNs, any (\x -> (show x ++ "Top") == NeuralNetworks.label n) nBod ]
 
-
+{-
 p1 :: LP
 p1 = [Cl (A 1 "") [A 2 ""] [A 3 ""], Assumption (A 3 "")]
 
@@ -260,3 +260,4 @@ p5NN = baseNN p5 1
 
 p5NNrec :: NeuralNetwork
 p5NNrec = recursiveConnections p5NN []
+-}
