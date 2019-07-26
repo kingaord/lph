@@ -28,7 +28,7 @@ import Translation
 -- | NNupdate that contains Top and Bottom neurons for the input layer.
 topBotNN :: NNupdate
 topBotNN = NNupdate
-    { inpNeuToAdd      = [Neuron "Top" "-0.5" 0.0 "inpTop", Neuron "Bot" "-0.5" 0.0 "inpBot"]
+    { inpNeuToAdd      = [Neuron "Top" "threshold" (-0.5) "inpTop", Neuron "Bot" "threshold" (-0.5) "inpBot"]
     , hidNeuToAdd      = []
     , outNeuToAdd      = []
     , outNeuToRemove   = []
@@ -90,7 +90,7 @@ updFromAssumption (Assumption hd) nn w biasHid biasOut = case outNeuOld of
                 , outNeuToRemove   = []
                 , inpToHidConToAdd = [Connection "Bot" hidNeuIdxBot w]
                 , hidToOutConToAdd = [Connection hidNeuIdxTop outNeuIdx w, 
-                                      Connection hidNeuIdxBot (NeuralNetworks.idx (remJust (lookup neu $ (zip <*> tail) (outLayer nn)))) w]
+                                      Connection hidNeuIdxBot (NeuralNetworks.idx (remJust $ lookup neu $ (zip <*> tail) (outLayer nn))) w]
                 }
     where
         outNeuOld       = findNeuByLabel hd (outLayer nn)
@@ -108,7 +108,7 @@ updFromAssumption (Assumption hd) nn w biasHid biasOut = case outNeuOld of
         hidNeuIdxBot    = "hid" ++ hidNeuIdxNumBot
         hidNs           = [Neuron ("h" ++ hidNeuIdxNum ++ "Top") "threshold" biasHid hidNeuIdxTop, 
                            Neuron ("h" ++ hidNeuIdxNum ++ "Bot") "threshold" biasHid hidNeuIdxBot]
-        remJust = \(Just x) -> x
+        remJust         = \(Just x) -> x
 
 
 updFromFact :: Clause -> NeuralNetwork -> Float -> Float -> Float -> NNupdate
