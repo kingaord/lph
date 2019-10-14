@@ -77,7 +77,7 @@ module LogicPrograms
 import Auxiliary
 import TwoValuedSem
 import ThreeValuedSem
-import Data.List (nub, intercalate, subsequences, intersect, (\\), partition)
+import Data.List (nub, intercalate, subsequences, intersect, (\\), partition, groupBy, sortBy)
 import System.Random
 import Text.ParserCombinators.ReadP
 import Data.Char
@@ -189,6 +189,25 @@ instance Eq Clause where
     Cl h1 pb1 nb1 == Cl h2 pb2 nb2  = h1 == h2 && eqLists pb1 pb2 && eqLists nb1 nb2
     _             == _              = False
 
+instance Ord Clause where
+    Assumption h1 < Assumption h2 = h1 < h2
+    Assumption _  < _             = True
+    _             < Assumption _  = False
+    Fact h1       < Fact h2       = h1 < h2
+    Fact _        < _             = True
+    _             < Fact _        = False
+    Cl h1 pb1 nb1 < Cl h2 pb2 nb2
+        | h1  < h2  = True
+        | h1  > h2  = False
+        | pb1 < pb2 = True
+        | pb1 > pb2 = False
+        | nb1 < nb2 = True
+        | otherwise = False
+    
+    a <= b = (a < b) || (a == b)
+    a >  b = b < a
+    a >= b = b <= a
+
 instance Show Clause where
     show cl = case cl of
         Fact h          -> show h ++ " <- Top"
@@ -197,7 +216,6 @@ instance Show Clause where
             | null pb   -> show h ++ " <- ~" ++ intercalate ", ~" (map show nb)
             | null nb   -> show h ++ " <- " ++ intercalate ", " (map show pb)
             | otherwise -> show h ++ " <- " ++ intercalate ", " (map show pb) ++ ", ~" ++ intercalate ", ~" (map show nb)
-
 
 -- | Logic program is a list of clauses.
 type LP = [Clause]
@@ -213,7 +231,7 @@ instance Show IntLP where
     show (IntLP tr fa) = "(" ++ show tr ++ ", " ++ show fa ++ ")"
 
 instance Eq IntLP where
-    IntLP tr1 fa1 == IntLP tr2 fa2 = eqLists tr1 tr2 && eqLists fa1 fa2
+    IntLP tr1 fa1 == IntLP tr2 fa2 = eqLists (nub tr1) (nub tr2) && eqLists (nub fa1) (nub fa2)
 
 -- | The ordering of interpretations is knowledge-based ordering.
 instance Ord IntLP where
@@ -230,7 +248,7 @@ type OverlappingAtoms = (Atom, Atom)
 -- | Positive body of a clause, i.e. atoms that are not preceded by negation.
 clPBody :: Clause -> [Atom]
 clPBody cl = case cl of
-    Cl _ _ _     -> clPAtoms cl
+    Cl _ _ _     -> nub $ clPAtoms cl
     Fact _       -> []
     Assumption _ -> []
 
@@ -238,7 +256,7 @@ clPBody cl = case cl of
 -- | Negative body of a clause, i.e. atoms that are preceded by negation.
 clNBody :: Clause -> [Atom]
 clNBody cl = case cl of
-    Cl _ _ _     -> clNAtoms cl
+    Cl _ _ _     -> nub $ clNAtoms cl
     Fact _       -> []
     Assumption _ -> []
 
@@ -327,7 +345,7 @@ bp = nub . bpDup
 
 
 -- | Definition of an atom is the set of all clauses that have the atom as the
--- head.
+-- head (may contain duplicates).
 atomDef :: Atom -> LP -> LP
 atomDef a lp = [ cl | cl <- lp, clHead cl == a ]
 
@@ -376,9 +394,7 @@ isModelLukasiewiczLP lp int = all (\x -> evalLukasiewicz x int == Tr3v) lp
 -- 2-valued semantic).
 intsLPgenerator2v :: [Atom] -> [IntLP]
 intsLPgenerator2v as =
-    [ IntLP x (as \\ x) | x <- powerAs ]
-    where
-        powerAs = subsequences as
+    [ IntLP x (as \\ x) | x <- subsequences as ]
 
 
 -- | Generator of all possible interpretations from a given set of atoms (in
@@ -430,9 +446,9 @@ modifiedLP lp cl = case cl of
 
 -- | List of atoms that "overlap", i.e. atoms that have the same index number
 -- but one of them has label with "h" and the other does not.
-overlappingAtoms :: LP -> [OverlappingAtoms]
-overlappingAtoms lp = [ (atom, atomCouterpart) |
-    atom <- snd partitionedAtoms,
+overlappingAtoms :: LP -> [Atom] -> [OverlappingAtoms]
+overlappingAtoms lp abdG = [ (atom, atomCouterpart) |
+    atom <- abdG ++ snd partitionedAtoms,
     atomCouterpart <- fst partitionedAtoms,
     LogicPrograms.idx atom == LogicPrograms.idx atomCouterpart ]
     where

@@ -17,13 +17,17 @@ module NeuralNetworks
     , NeuralNetwork (..)
     , NNupdate (..)
     , NNfactors (..)
-    , showNs
-    , showConns
+    , neuronsToPythonString
     , nnToPythonString
     , truthNN
     , emptyNN
     , emptyNNupd
+    , printNNPythonString
+    , saveToFile
     ) where
+
+import Data.List (intercalate)
+import System.IO  
 
 
 data Neuron = Neuron 
@@ -80,31 +84,34 @@ data NNfactors = NNfactors
     , weightFactor    :: Float  -- weight W factor (added value)
     , aminFactor      :: Float  -- A_min factor (added value)
     }
+    deriving (Show, Read)
 
 
-showNs :: [Neuron] -> String
-showNs []                       = "], "
-showNs ((Neuron l aF b idx):xs) = case length ((Neuron l aF b idx):xs) of 
-    1 -> "(" ++ show l ++ ", " ++ show aF ++ ", " ++ show b ++ ", " ++ show idx ++ ")], "
-    _ -> "(" ++ show l ++ ", " ++ show aF ++ ", " ++ show b ++ ", " ++ show idx ++ "), " ++ showNs xs
+neuronsToPythonString :: [Neuron] -> String
+neuronsToPythonString ns = "[" ++ intercalate ", " stringList ++ "]"
+    where
+        stringList = do
+            (Neuron label activFunc bias idx) <- ns
+            return ("(" ++ show label ++ ", " ++ show activFunc ++ ", " ++ show bias ++ ", " ++ show idx ++ ")")
 
 
-showConns :: [Connection] -> String
-showConns []                          = "]"
-showConns ((Connection from to w):xs) = case length ((Connection from to w):xs) of 
-    1 -> "(" ++ show from ++ ", " ++ show to ++ ", " ++ show w ++ ")]"
-    _ -> "(" ++ show from ++ ", " ++ show to ++ ", " ++ show w ++ "), " ++ showConns xs
+connectionsToPythonString :: [Connection] -> String
+connectionsToPythonString ns = "[" ++ intercalate ", " stringList ++ "]"
+    where
+        stringList = do
+            (Connection from to weight) <- ns
+            return ("(" ++ show from ++ ", " ++ show to ++ ", " ++ show weight ++ ")")
 
 
 nnToPythonString :: NeuralNetwork -> String
 nnToPythonString (NN iL hL oL rL ihC hoC rC) =
-    "{\"inpLayer\" = [" ++ showNs iL ++ 
-    "\"hidLayer\" = [" ++ showNs hL ++ 
-    "\"outLayer\" = [" ++ showNs oL ++ 
-    "\"recLayer\" = [" ++ showNs rL ++ 
-    "\"inpToHidConnections\" = [" ++ showConns ihC ++ 
-    "\"hidToOutConnections\" = [" ++ showConns hoC ++ 
-    "\"recConnections\" = [" ++ showConns rC ++ "}"
+    "{\"inpLayer\" = " ++ neuronsToPythonString iL ++ ", " ++
+    "\"hidLayer\" = " ++ neuronsToPythonString hL ++ ", " ++
+    "\"outLayer\" = " ++ neuronsToPythonString oL ++ ", " ++
+    "\"recLayer\" = " ++ neuronsToPythonString rL ++ ", " ++
+    "\"inpToHidConnections\" = " ++ connectionsToPythonString ihC ++ ", " ++
+    "\"hidToOutConnections\" = " ++ connectionsToPythonString hoC ++ ", " ++
+    "\"recConnections\" = " ++ connectionsToPythonString rC ++ "}"
 
 
 truthNN :: Float -> NNupdate
@@ -140,9 +147,14 @@ emptyNN = NN
     , recConnections      = []
     }
 
-{-
-showNNPython :: NeuralNetwork -> IO String
-showNNPython x = do
-    nn <- additionalConnectionsIO x 1 0.0 0.05
+
+printNNPythonString :: IO NeuralNetwork -> IO String
+printNNPythonString inp = do
+    nn <- inp
     return $ nnToPythonString nn
--}
+
+
+saveToFile :: IO String -> IO ()
+saveToFile nn = do
+    toWrite <- nn
+    writeFile "NN_new.txt" toWrite
