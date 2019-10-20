@@ -33,7 +33,7 @@ defining the negation itself.
 This module contains definitions of types for atoms, clauses and logic programs,
 as well as functions that provide essential properties of clauses and logic
 programs.
--}{-
+-}
 module LogicPrograms
     ( Atom (..)
     , Clause (..)
@@ -85,17 +85,7 @@ import Data.Char
 
 -- | Atoms are basic structures for clauses.
 data Atom = A { idx :: Int, label :: [Char] }
---    deriving (Read)
-
-instance Read Atom where
-    readList atom = do 
-        (readsPrec 0 (head $ fst $ readP_to_S readIdx) :: [([Atom], String)])
-        where
-            readIdx = many1 digit
-            readLab = many1 label
-            digit   = satisfy (`elem` ['0'..'9'])
-            label   = satisfy (`elem` ['a'..'z'])
-
+    deriving (Read)
 
 instance Show Atom where
     show (A idx lab)
@@ -111,7 +101,7 @@ instance Ord Atom where
     a <= b = (a < b) || (a == b)
     a >  b = b < a
     a >= b = b <= a
-{-
+
 instance TwoValuedSemantic Atom IntLP where
     eval2v a int
         | elem a (trLP int) = Tr2v
@@ -476,4 +466,4 @@ clSameHeads cl lp = length [ cls | cls <- lp, clHead cls == clHead cl ]
 -- clause for every clause in a given logic program. 
 clsSameHeads :: LP -> [Int]
 clsSameHeads lp = map (\x -> clSameHeads x lp) lp
--}
+
