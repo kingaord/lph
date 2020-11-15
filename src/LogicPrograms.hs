@@ -1,4 +1,6 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DeriveGeneric #-}
 
 {-|
 Module      : LogicPrograms
@@ -57,6 +59,8 @@ module LogicPrograms
     , bpDup
     , bp
     , atomDef
+    , definedLP
+    , undefinedLP
     , isModel2vLP
     , isModelLukasiewiczLP
     , evalBody2v
@@ -73,7 +77,10 @@ module LogicPrograms
     , clSameHeads
     , clsSameHeads
     ) where
--}
+
+import Data.Aeson
+import GHC.Generics
+
 import Auxiliary
 import TwoValuedSem
 import ThreeValuedSem
@@ -85,7 +92,16 @@ import Data.Char
 
 -- | Atoms are basic structures for clauses.
 data Atom = A { idx :: Int, label :: [Char] }
-    deriving (Read)
+    deriving (Read, Generic)
+
+{-
+instance Read Atom where
+    read "A"
+-}
+
+instance FromJSON Atom
+instance ToJSON Atom where
+    toEncoding = genericToEncoding defaultOptions
 
 instance Show Atom where
     show (A idx lab)
@@ -142,7 +158,11 @@ data Clause =
         , clPAtoms :: [Atom]
         , clNAtoms :: [Atom]
         }
-    deriving (Read)
+    deriving (Read, Generic)
+
+instance FromJSON Clause
+instance ToJSON Clause where
+    toEncoding = genericToEncoding defaultOptions
 
 instance TwoValuedSemantic Clause IntLP where
     eval2v cl int = case cl of
@@ -338,6 +358,16 @@ bp = nub . bpDup
 -- head (may contain duplicates).
 atomDef :: Atom -> LP -> LP
 atomDef a lp = [ cl | cl <- lp, clHead cl == a ]
+
+
+-- | Defined atoms in a given LP.
+definedLP :: LP -> [Atom]
+definedLP lp = lpHeads lp
+
+
+-- | Undefined atoms in a given LP.
+undefinedLP :: LP -> [Atom]
+undefinedLP lp = onlyBodies lp
 
 
 -- | Evaluates the body of a clause in the two-valued semantic.

@@ -1,3 +1,6 @@
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DeriveGeneric #-}
+
 {-|
 Module      : NeuralNetworks
 Description : Definitions of types that concern neural networks.
@@ -26,8 +29,13 @@ module NeuralNetworks
     , saveToFile
     ) where
 
+import Data.Aeson
+import GHC.Generics
+
+import Auxiliary
 import Data.List (intercalate)
-import System.IO  
+import System.IO
+
 
 
 data Neuron = Neuron 
@@ -36,21 +44,45 @@ data Neuron = Neuron
     , bias      :: Float 
     , idx       :: String 
     }
-    deriving (Read, Eq)
+    deriving (Generic, Read, Eq)
+
+instance FromJSON Neuron
+instance ToJSON Neuron where
+    toEncoding = genericToEncoding defaultOptions
 
 instance Show Neuron where 
     show (Neuron l aF b idx) = "(" ++ l ++ ", " ++ aF ++ ", " ++ show b ++ ", " ++ idx ++ ")"
 
+instance Ord Neuron where
+    n1 < n2 = idx n1 < idx n2
+    
+    a <= b = (a < b) || (a == b)
+    a >  b = b < a
+    a >= b = b <= a
+
+
 
 data Connection = Connection
-    { from   :: String
-    , to     :: String
-    , weight :: Float
+    { fromNeuron :: String
+    , toNeuron   :: String
+    , weight     :: Float
     }
-    deriving (Read, Eq)
+    deriving (Generic, Read, Eq)
+
+instance FromJSON Connection
+instance ToJSON Connection where
+    toEncoding = genericToEncoding defaultOptions
 
 instance Show Connection where
     show (Connection from to w) = "(" ++ from ++ ", " ++ to ++ ", " ++ show w ++ ")"
+
+instance Ord Connection where
+    c1 < c2 = fromNeuron c1 < fromNeuron c2
+    
+    a <= b = (a < b) || (a == b)
+    a >  b = b < a
+    a >= b = b <= a
+
 
 
 data NeuralNetwork = NN
@@ -62,7 +94,29 @@ data NeuralNetwork = NN
     , hidToOutConnections :: [Connection]
     , recConnections      :: [Connection]
     }
-    deriving (Show, Read)
+    deriving (Generic, Show, Read)
+
+instance FromJSON NeuralNetwork
+instance ToJSON NeuralNetwork where
+    toEncoding = genericToEncoding defaultOptions
+
+instance Eq NeuralNetwork where
+    nn1 == nn2 =
+        Prelude.all (True==)
+            [ eqLists (inpLayer nn1) (inpLayer nn2)
+            , eqLists (hidLayer nn1) (hidLayer nn2)
+            , eqLists (outLayer nn1) (outLayer nn2)
+            , eqLists (recLayer nn1) (recLayer nn2)
+            ]
+        
+        &&
+        
+        Prelude.all (True==)
+            [ eqLists (inpToHidConnections nn1) (inpToHidConnections nn2)
+            , eqLists (hidToOutConnections nn1) (hidToOutConnections nn2)
+            , eqLists (recConnections nn1) (recConnections nn2)
+            ]
+
 
 
 -- | A special type for neural networks updates handling.
@@ -87,8 +141,9 @@ data NNfactors = NNfactors
     deriving (Show, Read)
 
 
+
 neuronsToPythonString :: [Neuron] -> String
-neuronsToPythonString ns = "[" ++ intercalate ", " stringList ++ "]"
+neuronsToPythonString ns = "[" ++ Data.List.intercalate ", " stringList ++ "]"
     where
         stringList = do
             (Neuron label activFunc bias idx) <- ns
@@ -96,7 +151,7 @@ neuronsToPythonString ns = "[" ++ intercalate ", " stringList ++ "]"
 
 
 connectionsToPythonString :: [Connection] -> String
-connectionsToPythonString ns = "[" ++ intercalate ", " stringList ++ "]"
+connectionsToPythonString ns = "[" ++ Data.List.intercalate ", " stringList ++ "]"
     where
         stringList = do
             (Connection from to weight) <- ns
